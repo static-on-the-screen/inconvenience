@@ -1,4 +1,10 @@
 import tkinter as gui
+from tkinter import messagebox
+
+with open("malice.txt") as file:
+    orbcontent = file.readlines()
+    orbmalice = orbcontent[0]
+    print(orbmalice)
 
 root = gui.Tk()
 root.title("Inconvenience Store")
@@ -18,8 +24,13 @@ def kanadewindow():
 
 
 def orbwindow():
+    global file
     root.destroy()
-    gui.Message()
+    messagebox.showerror("Error!", "There was a problem with the system. Please restart the program.")
+    with open('malice.txt', 'w')as file:
+        file.truncate(0)
+        file.write('False')
+        file.close()
 
 header = gui.Menu(root)
 header_account = gui.Menu(header, tearoff = 0)
@@ -37,7 +48,10 @@ gui.Label(root, text="Dehydrated Water").pack()
 gnomesuke = gui.PhotoImage(file = r'C:\Users\emilhilv\Pictures\gnomesuke.png')
 gui.Button(root, text="please", image = gnomesuke, command = "None").pack()
 gui.Label(root, text="?????").pack()
-orb = gui.PhotoImage(file = r'C:\Users\emilhilv\Pictures\orb.png')
+if orbmalice == 'True':
+    orb = gui.PhotoImage(file = r'C:\Users\emilhilv\Pictures\orb.png')
+elif orbmalice == 'False':
+    orb = gui.PhotoImage(file=r'C:\Users\emilhilv\Pictures\normalorb.png')
 gui.Button(root, image = orb, command = orbwindow).pack()
 
 # motto = Image.open("C:/Users/emilhilv/Downloads/wordart (4).png")
