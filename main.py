@@ -14,6 +14,91 @@ root.title("Inconvenience Store")
 root.geometry("900x650")
 root.configure(bg='#CAFAD5')
 
+def refresh_product_list():
+    global image_refs
+    image_refs.clear()
+
+    for widget in root.grid_slaves():
+        if int(widget.grid_info()["row"]) >= 2:
+            widget.destroy()
+
+    items = loaditems("stock.txt")
+    row, col = 2, 0        
+
+    for name, price, stocknumber, description, important, imagepath in items:
+        try:
+            img = gui.PhotoImage(file=imagepath)
+            image_refs.append(img)
+        except Exception as e:
+            print(f"Error loading image '{imagepath}': {e}")
+            continue
+
+        btn = gui.Button(root, image=img, command=lambda n=name, p=price, s=stocknumber, d=description, im=important, ip=imagepath: show_item_details(n, p, s, d, im, ip))
+        btn.grid(row=row, column=col, pady=25)
+        lbl = gui.Label(root, text=name, bg="#CAFAD5")
+        lbl.grid(row=row+1, column=col)
+
+        col += 1
+        if col >= 3:
+            col = 0
+            row += 2
+
+def additem():
+    addwindow = gui.Toplevel(root)
+    addwindow.configure(bg='#CAFAD5')
+    addwindow.title("Add Item")
+    
+    gui.Label(addwindow, text="Item Name:", bg='#CAFAD5').grid(row=0, column=0, sticky='w', padx=5, pady=5)
+    entry_name = gui.Entry(addwindow, width=40)
+    entry_name.grid(row=0, column=1, padx=10)
+
+    gui.Label(addwindow, text="Price (CAD):", bg='#CAFAD5').grid(row=1, column=0, sticky='w', padx=5, pady=5)
+    entry_price = gui.Entry(addwindow, width=40)
+    entry_price.grid(row=1, column=1, padx=10, pady=10)
+
+    gui.Label(addwindow, text="Amount in Stock:", bg='#CAFAD5').grid(row=2, column=0, sticky='w', padx=5, pady=5)
+    entry_stocknumber = gui.Entry(addwindow, width=40)
+    entry_stocknumber.grid(row=2, column=1, padx=10, pady=10)
+
+    gui.Label(addwindow, text="Item Description:", bg='#CAFAD5').grid(row=3, column=0, sticky='w', padx=5, pady=5)
+    entry_description = gui.Entry(addwindow, width=40)
+    entry_description.grid(row=3, column=1, padx=10, pady=10)
+
+    gui.Label(addwindow, text="Important Notices (eg. item sales):", bg='#CAFAD5').grid(row=4, column=0, sticky='w', padx=5, pady=5)
+    entry_important = gui.Entry(addwindow, width=40)
+    entry_important.grid(row=4, column=1, padx=10, pady=10)
+
+    gui.Label(addwindow, text="Image Path:", bg='#CAFAD5').grid(row=5, column=0, sticky='w', padx=5, pady=5)
+    entry_image = gui.Entry(addwindow, width=40)
+    entry_image.grid(row=5, column=1, padx=10, pady=10)
+
+    def additem_submitbutton():
+        itemname = entry_name.get()
+        try:
+            itemprice = float(entry_price.get())
+            itemamount = int(entry_stocknumber.get())
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter a valid price and/or stock quantity value (in numbers).")
+            return
+        itemdesc = entry_description.get()
+        itemurgent = entry_important.get()
+        itemimage = entry_image.get()
+        itemimage=itemimage.replace("\\", "/")
+        itemprice = round(itemprice, 2)
+
+        if not itemname or not itemprice or not itemamount or not itemdesc or not itemurgent or not itemimage:
+            messagebox.showerror("Error", "Please fill out all fields.")
+            return
+
+        with open("stock.txt", "a") as file:
+            file.write(f"{itemname}\n${itemprice}\n{itemamount}\n{itemdesc}\n{itemurgent}\n{itemimage}\n***\n")
+
+        addwindow.destroy()
+        refresh_product_list()
+
+    gui.Button(addwindow, text="Submit", command=additem_submitbutton).grid(row=6)
+
+
 
 def employeeinfo():
     employeepngs = [
@@ -135,35 +220,90 @@ def viewschedule():
         dropdown.grid(row = i, column = 1, padx=5, pady=5)
         dropdowns[day]=dropdown
     viewemployees = gui.Button(schedule_window, text="View Employee Information", command=employeeinfo, padx=5, pady=5).grid(row = i+10, column = 1)
-
-
-
     schedule_window.mainloop()
+
+
+def loaditems(filename):
+    items = []
+    with open("stock.txt", 'r') as file:
+        content = file.read()
+
+    raw_items = content.split('***')
+    for entry in raw_items:
+        lines = [line.strip() for line in entry.strip().split('\n') if line.strip()]
+        if len(lines) == 6:
+            name, price, stocknumber, description, important, imagepath = lines
+            items.append((name, price, stocknumber, description, important, imagepath))
+        else:
+            print("Skipping malformed entry: {lines}")
+   
+    return items
+
+
+def show_item_details(name, price, stocknumber, description, important, imagepath):
+    detail = gui.Toplevel(root)
+    detail.title(name)
+    detail.config(bg="#CAFAD5")
+    image=None
+    if imagepath!= "N/A":
+        try:
+            image = gui.PhotoImage(file=imagepath)
+        except Exception as e:
+            print(f"Error loading image: {e}")
+    else:
+        print("Image path is N/A, no image to show")
+
+
+    if image:
+        img_label = gui.Label(detail, image=image)
+        img_label.image = image
+        img_label.grid(row=0, column=0, rowspan=3, padx=25, pady=25, sticky='nw')
+
+    namelabel = gui.Label(detail, text=name, font=("Helvetica", 24), bg="#CAFAD5").grid(row=0, column=1, sticky="NW")
+    pricelabel = gui.Label(detail, text=price, font=("Times New Roman", 12), bg="#CAFAD5").grid(row=1, column=1, sticky="nw")
+    desclabel = gui.Label(detail, text=description, justify="left", wraplength="300", font=("Times New Roman", 12), bg="#CAFAD5").grid(row=2, column=1, sticky="N")
+
+    if important != "N/A":
+        importantlabel  = gui.Label(detail, text=important, font=("Helvetica", 15, "bold"), bg="#CAFAD5", fg="red").grid(row=4, columnspan=3,column=0, sticky="nw")
 
 header = gui.Menu(root)
 header_account = gui.Menu(header, tearoff = 0)
 root.config(menu = header)
 header.add_cascade(label = "Account", menu = header_account)
 header_account.add_command(label = "View Schedule", command = viewschedule)
-header.add_cascade(label = "Stock")
+stockheader = gui.Menu(header,tearoff=0)
+header.add_cascade(label="Stock", menu=stockheader)
+stockheader.add_command(label = "Add Item...", command = additem)
+
+
 
 title = gui.PhotoImage(file=r'C:\Users\(Computer)\Desktop\wordart.png')
 titlepng = gui.Label(root, image=title, borderwidth=0)
-titlepng.pack()
+titlepng.grid(row=0, column=0, columnspan=3)
 motto = gui.Label(root, text="The home of everything you'll never need!", bg='#CAFAD5', fg='white', font=("Times New Roman", 24, "bold", "italic"))
-motto.pack()
+motto.grid(row=1, column=0, columnspan=3)
 
-kanade = gui.PhotoImage(file = r'C:\Users\(Computer)\Pictures\dehydrated.png')
-gui.Button(root, text="please", image = kanade, command = kanadewindow).pack()
-gui.Label(root, text="Dehydrated Water").pack()
-gnomesuke = gui.PhotoImage(file = r'C:\Users\(Computer)\Pictures\gnomesuke.png')
-gui.Button(root, text="please", image = gnomesuke, command = "None").pack()
-gui.Label(root, text="?????").pack()
-if orbmalice == 'True':
-    orb = gui.PhotoImage(file = r'C:\Users\(Computer)\Pictures\orb.png')
-elif orbmalice == 'False':
-    orb = gui.PhotoImage(file=r'C:\Users\(Computer)\Pictures\normalorb.png')
-gui.Button(root, image = orb, command = orbwindow).pack()
+items = loaditems("stock.txt")
+image_refs = []
+row, col = 2,0
+
+for name, price, stocknumber, description, important, imagepath in items:
+    try:
+        img = gui.PhotoImage(file=imagepath)
+        image_refs.append(img)
+    except Exception as e:
+        print(f"Error loading image '{imagepath}':{e}")
+        continue
+
+    btn = gui.Button(root, image=img, command=lambda n=name, p=price, s=stocknumber, d=description, im=important, ip=imagepath: show_item_details(n, p, s, d, im, ip))
+    btn.grid(row=row, column=col, pady=25)
+    lbl = gui.Label(root,text=name, bg="#CAFAD5")
+    lbl.grid(row=row+1, column=col)
+
+    col += 1
+    if col >= 3:
+        col = 0
+        row += 2
 
 # motto = Image.open("C:/Users/emilhilv/Downloads/wordart (4).png")
 # motto = ImageTk.PhotoImage(motto)
